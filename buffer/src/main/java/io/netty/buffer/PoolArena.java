@@ -47,15 +47,15 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     final int chunkSize;
     final int subpageOverflowMask;
     final int numSmallSubpagePools;
-    private final PoolSubpage<T>[] tinySubpagePools;
-    private final PoolSubpage<T>[] smallSubpagePools;
+    protected final PoolSubpage<T>[] tinySubpagePools;
+    protected final PoolSubpage<T>[] smallSubpagePools;
 
-    private final PoolChunkList<T> q050;
-    private final PoolChunkList<T> q025;
-    private final PoolChunkList<T> q000;
-    private final PoolChunkList<T> qInit;
-    private final PoolChunkList<T> q075;
-    private final PoolChunkList<T> q100;
+    protected final PoolChunkList<T> q050;
+    protected final PoolChunkList<T> q025;
+    protected final PoolChunkList<T> q000;
+    protected final PoolChunkList<T> qInit;
+    protected final PoolChunkList<T> q075;
+    protected final PoolChunkList<T> q100;
 
     private final List<PoolChunkListMetric> chunkListMetrics;
 
@@ -722,6 +722,29 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 src.position(srcOffset).limit(srcOffset + length);
                 dst.position(dstOffset);
                 dst.put(src);
+            }
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            try {
+                super.finalize();
+            } finally {
+                destroyPoolSubPages(smallSubpagePools);
+                destroyPoolSubPages(tinySubpagePools);
+                destroyPoolChunkLists(qInit, q000, q025, q050, q075, q100);
+            }
+        }
+
+        private static void destroyPoolSubPages(PoolSubpage<ByteBuffer>[] pages) {
+            for (PoolSubpage<ByteBuffer> page : pages) {
+                page.destroy();
+            }
+        }
+
+        private void destroyPoolChunkLists(PoolChunkList<ByteBuffer>... chunkLists) {
+            for (PoolChunkList<ByteBuffer> chunkList: chunkLists) {
+                chunkList.destroy(this);
             }
         }
     }
